@@ -45,20 +45,34 @@ int main(int argc, char *argv[]) {
     // Attente de connexion des clients
     listen(sockfd,5);
     clilen = sizeof(cli_addr);
-    newsockfd = accept(sockfd,
-                (struct sockaddr *) &cli_addr,
-                &clilen);
-    if (newsockfd < 0)
-        error("ERROR on accept");
-
-    // Lecture et écriture de messages avec le client
-    while(1) {
-        bzero(buffer,256);
-        n = read(newsockfd,buffer,255);
-        if (n < 0) error("ERROR reading from socket");
-        printf("Message reçu du client: %s\n",buffer);
-        n = write(newsockfd,"Message reçu",13);
-        if (n < 0) error("ERROR writing to socket");
+    int pid;
+    while (1) {
+         newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+         if (newsockfd < 0) {
+                error("ERROR on accept");
+         }
+         else {
+            //fork new process
+            pid = fork();
+            if (pid < 0) {
+                error("ERROR in new process creation");
+            }
+            if (pid == 0) {
+                //child process
+                bzero(buffer,256);
+                n = read(newsockfd,buffer,255);
+                if (n < 0) error("ERROR reading from socket");
+                printf("Message reçu du client: %s\n",buffer);
+                n = write(newsockfd,"Message reçu",13);
+                if (n < 0) error("ERROR writing to socket");
+                close(newsockfd);
+            } else {
+                //parent process
+                close(newsockfd);
+            }
+         }
+         
+         
     }
 
     // Fermeture du socket serveur
