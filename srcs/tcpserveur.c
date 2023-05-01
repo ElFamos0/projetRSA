@@ -46,36 +46,57 @@ int main(int argc, char *argv[]) {
     listen(sockfd,5);
     clilen = sizeof(cli_addr);
     int pid;
-    while (1) {
+    int is_main = 1;
+    while (is_main) {
+        //test pour voir si nouveau un client s'est connecté
          newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
          if (newsockfd < 0) {
                 error("ERROR on accept");
          }
          else {
-            //fork new process
+            //Création d'un nouveau process pour le nouveau client
             pid = fork();
             if (pid < 0) {
                 error("ERROR in new process creation");
             }
             if (pid == 0) {
                 //child process
-                bzero(buffer,256);
+                is_main = 0;
+            } else {
+                //parent process
+                //close(newsockfd);
+            }
+         }
+    }
+
+    if (!is_main) {
+        int connected = 1;
+        while(connected) {
+            bzero(buffer,256);
                 n = read(newsockfd,buffer,255);
                 if (n < 0) error("ERROR reading from socket");
                 printf("Message reçu du client: %s\n",buffer);
-                n = write(newsockfd,"Message reçu",13);
-                if (n < 0) error("ERROR writing to socket");
-                close(newsockfd);
-            } else {
-                //parent process
-                close(newsockfd);
-            }
-         }
-         
-         
+                //printf("%d,%s\n",n,buffer);
+                // truncate the newline character
+                size_t newline_pos = strcspn(buffer, "\n");  // find position of newline character
+                buffer[newline_pos] = '\0';  // overwrite the newline character with null character
+                if (!(strcmp(buffer,("exit")))) {
+                    n = write(newsockfd,"end",4);
+                    if (n < 0) error("ERROR writing to socket");
+                    close(newsockfd);
+                    connected = 0;
+                    printf("Client exited\n");
+                }
+                else {
+                    n = write(newsockfd,"Message reçu",13);
+                     if (n < 0) error("ERROR writing to socket");
+                 }
+        }
+        return 0;
     }
-
-    // Fermeture du socket serveur
-    close(sockfd);
-    return 0;
+    else {
+        // Fermeture du socket serveur
+        close(sockfd);
+        return 0;
+    }
 }

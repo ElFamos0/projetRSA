@@ -51,7 +51,8 @@ int main(int argc, char *argv[])
         error("Erreur: connexion au serveur impossible");
 
     // Envoi et réception de messages avec le serveur
-    while(1) {
+    int connected =1;
+    while(connected) {
         printf("Entrez votre message: ");
         bzero(buffer,256);
         fgets(buffer,255,stdin);
@@ -62,7 +63,12 @@ int main(int argc, char *argv[])
         n = read(sockfd,buffer,255);
         if (n < 0)
              error("Erreur: impossible de lire depuis le socket");
-        printf("Message reçu du serveur: %s\n",buffer);
+        size_t newline_pos = strcspn(buffer, "\n");  // find position of newline character
+        buffer[newline_pos] = '\0';  // overwrite the newline character with null character
+        if (!(strcmp(buffer,("end")))) {
+                    connected = 0;
+                }
+        else {printf("Message reçu du serveur: %s\n",buffer);}
     }
 
     // Fermeture du socket client
