@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include "../includes/commandhandler.h"
 
 // Fonction pour gérer les erreurs
 void error(const char *msg) {
@@ -76,8 +77,7 @@ int main(int argc, char *argv[]) {
                 n = read(newsockfd,buffer,255);
                 if (n < 0) error("ERROR reading from socket");
                 printf("Message reçu du client: %s\n",buffer);
-                //printf("%d,%s\n",n,buffer);
-                // truncate the newline character
+
                 size_t newline_pos = strcspn(buffer, "\n");  // find position of newline character
                 buffer[newline_pos] = '\0';  // overwrite the newline character with null character
                 if (!(strcmp(buffer,("exit")))) {
@@ -88,6 +88,9 @@ int main(int argc, char *argv[]) {
                     printf("Client exited\n");
                 }
                 else {
+                    char * reponse = handle_command(buffer);
+                    printf("Réponse: %s\n", reponse);
+
                     n = write(newsockfd,"Message reçu",13);
                      if (n < 0) error("ERROR writing to socket");
                  }

@@ -1,5 +1,6 @@
 FILES_C 	=	tcpclient.c
-FILES_S   	=	tcpserveur.c
+FILES_S   	=	tcpserveur.c \
+				command_handler.c
 
 S_PATH	=	srcs/
 O_PATH	=	objs/
