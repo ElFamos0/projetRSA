@@ -5,7 +5,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include "../includes/commandhandler.h"
+#include "../includes/command_handler.h"
 
 // Fonction pour gérer les erreurs
 void error(const char *msg) {
@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
                     char * reponse = handle_command(buffer);
                     printf("Réponse: %s\n", reponse);
 
-                    n = write(newsockfd,"Message reçu",13);
+                    n = write(newsockfd,reponse,strlen(reponse));
                      if (n < 0) error("ERROR writing to socket");
                  }
         }
