@@ -163,26 +163,55 @@ int main(int argc, char *argv[])
     threads_arg[0] = arg_create(server_messages,mutex,sockfd);
     pthread_create(&threads[0], NULL, read_server_messages_routine, threads_arg[0]);
     // Boucle qui s'occupe de l'envoie de messages vers le serveur
+    int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
+    fd_set set;
+    struct timeval timeout;
+
     while(connected) {
+        // Use select to check for input from stdin
+        FD_ZERO(&set);
+        FD_SET(STDIN_FILENO, &set);
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 10000; // 10ms
+
+
         pthread_mutex_lock(&mutex);
         connected = (!threads_arg[0]->ended);
         pthread_mutex_unlock(&mutex);
         if (connected) {
             bzero(buffer,256);
-            fgets(buffer,255,stdin);
-            n = write(sockfd,buffer,strlen(buffer));
-            char *last_newline = strrchr(buffer, '\n');
-            if (last_newline != NULL) {
-                *last_newline = '\0';
-            } // On enlève le dernier '\n'
-            if(strcmp(buffer,"exit") ==0) {
-                pthread_mutex_lock(&mutex);
-                connected = 0;
-                threads_arg[0]->ended = 1;
-                pthread_mutex_unlock(&mutex);
+            if (select(STDIN_FILENO + 1, &set, NULL, NULL, &timeout) > 0) {
+                fgets(buffer, 255, stdin);
+                n = strlen(buffer);
+                char *last_newline = strrchr(buffer, '\n');
+                if (last_newline != NULL) {
+                    *last_newline = '\0';
+                } // On enlève le dernier '\n'
             }
-            if (n < 0)
-                error("Erreur: impossible d'écrire sur le socket");
+            if (buffer[0] == '\0') {
+                // do nothing
+            } else {
+                n = write(sockfd,buffer,strlen(buffer));
+                if (n < 0)
+                    error("Erreur: impossible d'écrire sur le socket");
+
+                //printf("Message sent : %s\n",buffer);
+                char *last_newline = strrchr(buffer, '\n');
+                if (last_newline != NULL) {
+                    *last_newline = '\0';
+                } // On enlève le dernier '\n'
+
+                if(strcmp(buffer,"exit") ==0) {
+                    pthread_mutex_lock(&mutex);
+                    connected = 0;
+                    threads_arg[0]->ended = 1;
+                    pthread_mutex_unlock(&mutex);
+                }
+               
+            }
+            // fgets(buffer,255,stdin);
+            
         }
     }
     sleep(0.3);
