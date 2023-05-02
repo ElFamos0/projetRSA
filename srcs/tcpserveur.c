@@ -67,7 +67,7 @@ void * new_client_routine(void * arg) {
     // do something
     pthread_mutex_unlock(&mutex);
     int n;
-    char * reponse = "\033[1;31mBienvenue sur la chat d'assistance !\033[0m\nVous êtes actuellement connecté avec notre chat bot! Tappez \033[1;31m'help'\033[0m pour avoir plus d'infos !\n";
+    char * reponse = "\033[1;31mWelcome !\033[0m\nYou're currently connected to our chatbot ! Type '\033[1;31mhelp\033[0m' for more infos !\n";
     n = write(arglist->sock_id,reponse,strlen(reponse));
                     if (n < 0) error("ERROR writing to socket");
     sleep(0.5);
@@ -80,8 +80,11 @@ void * new_client_routine(void * arg) {
         if (n < 0) error("ERROR reading from socket");
         printf("Message reçu du client: %s\n",buffer);
 
-        size_t newline_pos = strcspn(buffer, "\n");  // find position of newline character
-        buffer[newline_pos] = '\0';  // overwrite the newline character with null character
+        char *last_newline = strrchr(buffer, '\n');
+            if (last_newline != NULL) {
+                *last_newline = '\0';
+            } // On enlève le dernier '\n'
+
         if (!(strcmp(buffer,("exit")))) {
             n = write(arglist->sock_id,"end",4);
             if (n < 0) error("ERROR writing to socket");
@@ -90,10 +93,16 @@ void * new_client_routine(void * arg) {
         }
         else {
             char * reponse = handle_command(buffer);
-            printf("Réponse: %s\n", reponse);
-
-            n = write(arglist->sock_id,reponse,strlen(reponse));
-                if (n < 0) error("ERROR writing to socket");
+            // printf("Réponse: %s\n", reponse);
+            if (strcmp(reponse,"unknown") == 0) {
+                n = write(arglist->sock_id,"Unknown keyword - Forwarding you to a technician.\n",51);
+                    if (n < 0) error("ERROR writing to socket");
+                // TO DO NEXT
+            }
+            else {
+                n = write(arglist->sock_id,reponse,strlen(reponse));
+                    if (n < 0) error("ERROR writing to socket");
+                }
             }
     }
     printf("Client %d exited\n", arglist->sock_id);
@@ -122,8 +131,10 @@ void * new_staff_routine(void * arg) {
         n = read(arglist->sock_id,buffer,255);
         if (n < 0) error("ERROR reading from socket");
         
-        size_t newline_pos = strcspn(buffer, "\n");  // find position of newline character
-        buffer[newline_pos] = '\0';  // overwrite the newline character with null character
+        char *last_newline = strrchr(buffer, '\n');
+        if (last_newline != NULL) {
+            *last_newline = '\0';
+        } // On enlève le dernier '\n'
 
         if (!(strcmp(buffer,("tech")))) {
             status = 1;
@@ -176,8 +187,10 @@ void * new_staff_routine(void * arg) {
             if (n < 0) error("ERROR reading from socket");
             printf("Message reçu du staff: %s\n",buffer);
 
-            size_t newline_pos = strcspn(buffer, "\n");  // find position of newline character
-            buffer[newline_pos] = '\0';  // overwrite the newline character with null character
+            char *last_newline = strrchr(buffer, '\n');
+            if (last_newline != NULL) {
+                *last_newline = '\0';
+            } // On enlève le dernier '\n'
             if (!(strcmp(buffer,("exit")))) {
                 n = write(arglist->sock_id,"end",4);
                 if (n < 0) error("ERROR writing to socket");

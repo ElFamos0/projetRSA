@@ -55,6 +55,9 @@ void * read_server_messages_routine(void * arg) {
     fcntl(arglist->sockid, F_SETFL, flags | O_NONBLOCK);
 
     while (connected) {
+        pthread_mutex_lock(&mutex);
+        connected = (!arglist->ended);
+        pthread_mutex_unlock(&mutex);
         bzero(buffer,256);
         n = read(arglist->sockid,buffer,255);
 
@@ -80,13 +83,22 @@ void * read_server_messages_routine(void * arg) {
             if (last_newline != NULL) {
                 *last_newline = '\0';
             } // On enlève le dernier '\n'
+            if(strcmp(buffer,"end") !=0) {
 
-            pthread_mutex_lock(&mutex);
-            char id[20];
-            sprintf(id, "%d", arglist->msg_nb);  
-            arglist->msg_nb +=1;
-            list_append(arglist->msg->messages,id,buffer);
-            pthread_mutex_unlock(&mutex);
+            
+                pthread_mutex_lock(&mutex);
+                char id[20];
+                sprintf(id, "%d", arglist->msg_nb);  
+                arglist->msg_nb +=1;
+                list_append(arglist->msg->messages,id,buffer);
+                pthread_mutex_unlock(&mutex);
+            }
+            else {
+                connected = 0;
+                pthread_mutex_lock(&mutex);
+                arglist->ended = 1;
+                pthread_mutex_unlock(&mutex);
+            }
         }
 
         // print all messages in the message list
@@ -159,11 +171,21 @@ int main(int argc, char *argv[])
             bzero(buffer,256);
             fgets(buffer,255,stdin);
             n = write(sockfd,buffer,strlen(buffer));
+            char *last_newline = strrchr(buffer, '\n');
+            if (last_newline != NULL) {
+                *last_newline = '\0';
+            } // On enlève le dernier '\n'
+            if(strcmp(buffer,"exit") ==0) {
+                pthread_mutex_lock(&mutex);
+                connected = 0;
+                threads_arg[0]->ended = 1;
+                pthread_mutex_unlock(&mutex);
+            }
             if (n < 0)
                 error("Erreur: impossible d'écrire sur le socket");
         }
     }
-
+    sleep(0.3);
     list_destroy(server_messages->messages);
     free(server_messages);
     free(threads_arg);
