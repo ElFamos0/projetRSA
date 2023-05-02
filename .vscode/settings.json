@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "command_handler.h": "c",
+        "ipc.h": "c"
+    }
+}

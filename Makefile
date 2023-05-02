@@ -1,6 +1,8 @@
-FILES_C 	=	tcpclient.c
+FILES_C 	=	tcpclient.c\
+				list.c
 FILES_S   	=	tcpserveur.c \
-				command_handler.c
+				command_handler.c \
+				list.c
 
 S_PATH	=	srcs/
 O_PATH	=	objs/
@@ -21,7 +23,7 @@ S_NAME = tcpserver
 
 RM		=	rm -rf
 
-CFLAGS	= 	-Werror -Wall -O0 -g3 -fno-omit-frame-pointer -fno-optimize-sibling-calls -pthread
+CFLAGS	= 	-Werror -Wall -O0 -g3 -fno-omit-frame-pointer -fno-optimize-sibling-calls -pthread -lc
 
 
 ${OBJS_C}: ${SRCS_C}
