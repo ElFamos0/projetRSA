@@ -60,11 +60,12 @@ void * read_server_messages_routine(void * arg) {
         pthread_mutex_unlock(&mutex);
         bzero(buffer,256);
         n = read(arglist->sockid,buffer,255);
+        
 
         if (n < 0) {
             if (errno == EWOULDBLOCK || errno == EAGAIN) {
                 // no data available on the socket, continue loop
-                continue;
+                // do nothing
             }
             else {
                 error("ERROR reading from socket");
@@ -78,20 +79,24 @@ void * read_server_messages_routine(void * arg) {
             pthread_mutex_unlock(&mutex);
         }
         else {
+            // printf("%d\n",n);
+            // printf("%d %s\n",(int) strlen(buffer),buffer);
             // data received
+            while (n > strlen(buffer) && strlen(buffer) < 254) {
+                buffer[strlen(buffer)]= '-';
+                // printf("%s\n",buffer);
+                buffer[255] = '\0';
+            }
+            
             char *last_newline = strrchr(buffer, '\n');
             if (last_newline != NULL) {
                 *last_newline = '\0';
             } // On enlève le dernier '\n'
             if(strcmp(buffer,"end") !=0) {
-
-            
-                pthread_mutex_lock(&mutex);
                 char id[20];
                 sprintf(id, "%d", arglist->msg_nb);  
                 arglist->msg_nb +=1;
                 list_append(arglist->msg->messages,id,buffer);
-                pthread_mutex_unlock(&mutex);
             }
             else {
                 connected = 0;
@@ -104,7 +109,7 @@ void * read_server_messages_routine(void * arg) {
         // print all messages in the message list
         li = arglist->msg->messages;
         while (li->tail != NULL) {
-            printf("Message reçu du serveur : %s \n",li->head->val);
+            printf("Message received : %s \n",li->head->val);
             li = li->tail;
         }
         empty_list(arglist->msg->messages);

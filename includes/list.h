@@ -43,4 +43,8 @@ char *** list_to_arr(list_t * one_list, int * size_ptr);
 
 void destroy_list_arr(char *** arr, int size);
 
+element_t * list_pop(list_t * one_list);
+
+void list_remove(list_t * one_list, char* one_key);
+
 #endif /* __LIST_H__ */

@@ -21,6 +21,7 @@ struct _arg_element_t
     int sock_to;
     info_t * info;
     pthread_mutex_t mutex;
+    int ended;
 };
 
 typedef struct _arg_element_t arg_t;

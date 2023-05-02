@@ -35,6 +35,9 @@ void list_destroy(list_t* one_list) {
 
 bool list_is_empty(list_t* one_list) {
 
+    if(one_list == NULL) {
+        return true;
+    }
     if (one_list->head == NULL && one_list->tail == NULL) {
         return true;
     }
@@ -124,7 +127,7 @@ bool list_contains(list_t* one_list, char* one_key) {
     while (!(list_is_empty(one_list))) {
 
         if (strcmp(one_list->head->cle,one_key) == 0) {
-            
+            //printf("%s,%s\n",one_list->head->cle,one_key);
             state = true;
         }
         one_list = one_list->tail;
@@ -132,6 +135,27 @@ bool list_contains(list_t* one_list, char* one_key) {
     }
     return state;
 }
+
+element_t * list_pop(list_t * one_list) {
+
+    if (one_list != NULL) {
+
+        element_t * temp = one_list->head;
+        if (one_list ->tail != NULL) {
+            one_list->head = one_list->tail->head;
+            one_list->tail = one_list->tail->tail;
+        } else {
+            one_list->head = NULL;
+            one_list->tail = NULL;
+        }
+        return temp;
+
+    } else {
+        return NULL;
+    }
+
+}
+
 
 char* list_find(list_t* one_list, char* one_key) {
 
@@ -142,8 +166,9 @@ char* list_find(list_t* one_list, char* one_key) {
     else {
 
         char * val = NULL;
+        //printf("%s,%s\n",one_list->head->cle,one_key);
         while (!(list_is_empty(one_list)) && val == NULL) {
-
+            
             if (strcmp(one_list->head->cle,one_key)==0) {
                 val = one_list->head->val;
             }
@@ -154,6 +179,30 @@ char* list_find(list_t* one_list, char* one_key) {
 
         return val;
     }
+}
+
+void list_remove(list_t * one_list, char* one_key) {
+
+
+    if (!(list_contains(one_list,one_key))) {
+     // printf("No key found");
+    }
+
+    else {
+
+        char * val = NULL;
+        while (!(list_is_empty(one_list)) && val == NULL) {
+            //printf("%s,%s\n",one_list->head->cle,one_key);
+            if (strcmp(one_list->head->cle,one_key)==0) {
+                val = one_list->head->val;
+                list_pop(one_list);
+            }
+
+            one_list = one_list->tail;
+
+        }
+    }
+
 }
 
 char *** list_to_arr(list_t * one_list, int * size_ptr) {
