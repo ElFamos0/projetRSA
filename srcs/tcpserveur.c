@@ -18,6 +18,7 @@ pthread_t * threads;
 pthread_mutex_t mutex;
 arg_t ** threads_arg;
 int nb = 10000;
+int socket_count = 0; 
 
 // Fonction pour gérer les erreurs
 void error(const char *msg) {
@@ -25,7 +26,7 @@ void error(const char *msg) {
     exit(1);
 }
 
-arg_t * arg_create(int id, pthread_mutex_t mutex,info_t * info){
+arg_t * arg_create(int id, int thread_id,pthread_mutex_t mutex,info_t * info){
     arg_t * arg = (arg_t *)calloc(1,sizeof(arg_t));
     arg->sock_id = id;
     arg->mutex = mutex;
@@ -33,6 +34,7 @@ arg_t * arg_create(int id, pthread_mutex_t mutex,info_t * info){
     arg->in = strdup("\0");
     arg->out = strdup("\0");
     arg->ended = 0;
+    arg->thread_id = thread_id;
     return arg;
 }
 
@@ -73,6 +75,8 @@ void * new_client_routine(void * arg) {
                     if (n < 0) error("ERROR writing to socket");
     sleep(0.5);
     
+    char threadid[100];
+    sprintf(threadid, "%d", arglist->thread_id);  
     int connected = 1;
     char buffer[256];
     int is_connected_to_technician = 0;
@@ -125,8 +129,11 @@ void * new_client_routine(void * arg) {
                 if (strcmp(reponse,"unknown") == 0) {
                     n = write(arglist->sock_id,"Unknown keyword - Forwarding you to a technician.\n",51);
                         if (n < 0) error("ERROR writing to socket");
-                    pthread_mutex_lock(&mutex);    
+                    pthread_mutex_lock(&mutex); 
+                    //printf("List update\n");
+                    //list_print(arglist->info->techniciens);   
                     element_t * temp = list_pop(arglist->info->techniciens);
+                    //printf("updated\n");
                     pthread_mutex_unlock(&mutex);
                     if (temp == NULL) {
                         n = write(arglist->sock_id,"No Technician available - Try again later.\n",44);
@@ -142,23 +149,14 @@ void * new_client_routine(void * arg) {
                     else {
                         is_connected_to_technician = 1;
                         connected = 0;
-                        tech_id = atoi(temp->val);
-                        int i = 0;
-                        int done = 0;
-                        pthread_mutex_lock(&mutex);
-                        while (i < nb && threads_arg[i] != NULL && done == 0) {
-                            if((threads_arg[i]->sock_id) == tech_id && threads_arg[i]->ended != 1) {
-                                tech_thread_id = i;
-                                done =1;
-                            }
-                            i++;
-                        }
-                        pthread_mutex_unlock(&mutex);
-                        printf("Client forwarded\n");
+                        tech_id = atoi(temp->cle);
+                        tech_thread_id = atoi(temp->val);
+                        
+                        printf("Client forwarded %d\n", tech_thread_id);
                         n = write(arglist->sock_id,"You've been forwarded to a technician - Please ask your question again\n",72);
                         if (n < 0) error("ERROR writing to socket");
                          pthread_mutex_lock(&mutex);
-                        arg_new_in(threads_arg[tech_thread_id],"A new user needs your help !");
+                        arg_new_in(threads_arg[tech_thread_id],"A new user needs your help !\n");
                         pthread_mutex_unlock(&mutex);
                         }   
                 }
@@ -213,7 +211,11 @@ void * new_client_routine(void * arg) {
                 char sockid[100];
                 sprintf(sockid, "%d", tech_id);  
                 pthread_mutex_lock(&mutex);
-                list_append(arglist->info->techniciens, sockid,sockid);
+                char sid[100];
+                sprintf(sid, "%d", tech_id);  
+                char tid[100];
+                sprintf(tid, "%d", tech_thread_id);  
+                list_append(arglist->info->techniciens, sid,tid);
                 pthread_mutex_unlock(&mutex);
             }
             else { // Il a envoyé un message, on le transmet à notre technicien via son arg->in . 
@@ -227,9 +229,11 @@ void * new_client_routine(void * arg) {
         }
         // On regarde si le technicien ne nous a pas envoyé de message. 
             pthread_mutex_lock(&mutex);
+            //printf("Accessing out %d\n",tech_thread_id);
             free(client_buffer);
             client_buffer = strdup(threads_arg[tech_thread_id]->out);
             arg_new_out(threads_arg[tech_thread_id],"\0");
+            //printf("Leaving out %d\n",tech_thread_id);
             pthread_mutex_unlock(&mutex);
 
             if (!(strcmp(client_buffer,"\0") == 0)) {
@@ -239,10 +243,17 @@ void * new_client_routine(void * arg) {
                     n = write(arglist->sock_id,"Technician is unable to solve the issue - Forwarding you to an Expert.\n",72);
                         if (n < 0) error("ERROR writing to socket");
                     pthread_mutex_lock(&mutex);
+                    //printf("List update\n");
+                    //list_print(arglist->info->experts);
                     element_t * temp = list_pop(arglist->info->experts);
+                    //printf("updated\n");
                     char sockid[100];
                     sprintf(sockid, "%d", tech_id);  
-                    list_append(arglist->info->techniciens, sockid,sockid);
+                     char sid[100];
+                    sprintf(sid, "%d", tech_id);  
+                    char tid[100];
+                    sprintf(tid, "%d", tech_thread_id);  
+                    list_append(arglist->info->techniciens, sid,tid);
                     arg_new_in(threads_arg[tech_thread_id],"Client forwarded. Sending you back to available queue.\n");
                     pthread_mutex_unlock(&mutex);
 
@@ -253,28 +264,18 @@ void * new_client_routine(void * arg) {
                         if (n < 0) error("ERROR writing to socket");
                         close(arglist->sock_id);
                         arglist->ended = 1;
-                        connected = 0;
+                        is_connected_to_technician = 0;
                     } 
                     else {
                         is_connected_to_expert = 1;
                         is_connected_to_technician = 0;
-                        exp_id = atoi(temp->val);
-                        int i = 0;
-                        int done = 0;
-                        pthread_mutex_lock(&mutex);
-                        while (i < nb && threads_arg[i] != NULL && done == 0) {
-                            if((threads_arg[i]->sock_id) == exp_id && threads_arg[i]->ended != 1) {
-                                exp_thread_id = i;
-                                done =1;
-                            }
-                            i++;
-                        }
-                        pthread_mutex_unlock(&mutex);
-                        printf("Client forwarded\n");
+                        exp_id = atoi(temp->cle);
+                        exp_thread_id = atoi(temp->val);
+                        printf("Client forwarded %d\n", exp_thread_id);
                         n = write(arglist->sock_id,"You've been forwarded to an Expert - Please ask your question again\n",69);
                         if (n < 0) error("ERROR writing to socket");
                          pthread_mutex_lock(&mutex);
-                        arg_new_in(threads_arg[exp_thread_id],"A new user needs your help !");
+                        arg_new_in(threads_arg[exp_thread_id],"A new user needs your help !\n");
                         pthread_mutex_unlock(&mutex);
                         }   
                 }
@@ -290,10 +291,10 @@ void * new_client_routine(void * arg) {
 
                     if (temp == NULL) {
                         n = write(arglist->sock_id,"No Technician available - Try again later.\n",44);
-                        printf("Wrote no tech\n");
+                        
                         if (n < 0) error("ERROR writing to socket");
                         n = write(arglist->sock_id,"end",4);
-                        printf("Wrote end\n");
+                        
                         if (n < 0) error("ERROR writing to socket");
                         close(arglist->sock_id);
                         arglist->ended = 1;
@@ -302,23 +303,13 @@ void * new_client_routine(void * arg) {
                     else {
                         is_connected_to_technician = 1;
                         connected = 0;
-                        tech_id = atoi(temp->val);
-                        int i = 0;
-                        int done = 0;
-                        pthread_mutex_lock(&mutex);
-                        while (i < nb && threads_arg[i] != NULL && done == 0) {
-                            if((threads_arg[i]->sock_id) == tech_id&& threads_arg[i]->ended != 1) {
-                                tech_thread_id = i;
-                                done =1;
-                            }
-                            i++;
-                        }
-                        pthread_mutex_unlock(&mutex);
-                        printf("Client forwarded\n");
+                        tech_id = atoi(temp->cle);
+                        tech_thread_id = atoi(temp->val);
+                        printf("Client forwarded %d\n", tech_thread_id);
                         n = write(arglist->sock_id,"You've been forwarded to a technician - Please ask your question again\n",72);
                         if (n < 0) error("ERROR writing to socket");
                          pthread_mutex_lock(&mutex);
-                        arg_new_in(threads_arg[tech_thread_id],"A new user needs your help !");
+                        arg_new_in(threads_arg[tech_thread_id],"A new user needs your help !\n");
                         pthread_mutex_unlock(&mutex);
                         }
                 }
@@ -367,9 +358,13 @@ void * new_client_routine(void * arg) {
                 arglist->ended = 1;
                 is_connected_to_expert = 0;
                 char sockid[100];
-                sprintf(sockid, "%d", exp_id);  
+                sprintf(sockid, "%d", exp_id);
+                char sid[100];
+                sprintf(sid, "%d", exp_id);  
+                char tid[100];
+                sprintf(tid, "%d", exp_thread_id);    
                 pthread_mutex_lock(&mutex);
-                list_append(arglist->info->experts, sockid,sockid);
+                list_append(arglist->info->experts, sid,tid);
                 pthread_mutex_unlock(&mutex);
             }
             else { // Il a envoyé un message, on le transmet à notre expert via son arg->in . 
@@ -383,9 +378,11 @@ void * new_client_routine(void * arg) {
         }
         // On regarde si l'expert' ne nous a pas envoyé de message. 
             pthread_mutex_lock(&mutex);
+            //printf("Accessing out %d\n",exp_thread_id);
             free(client_buffer);
             client_buffer = strdup(threads_arg[exp_thread_id]->out);
             arg_new_out(threads_arg[exp_thread_id],"\0");
+            //printf("Accessing out %d\n",exp_thread_id);
             pthread_mutex_unlock(&mutex);
 
             if (!(strcmp(client_buffer,"\0") == 0)) {
@@ -405,8 +402,12 @@ void * new_client_routine(void * arg) {
                     is_connected_to_expert = 0;
                     char sockid[100];
                     sprintf(sockid, "%d", exp_id);  
+                    char sid[100];
+                    sprintf(sid, "%d", exp_id);  
+                    char tid[100];
+                    sprintf(tid, "%d", exp_thread_id);    
                     pthread_mutex_lock(&mutex);
-                    list_append(arglist->info->experts, sockid,sockid);
+                    list_append(arglist->info->experts, sid,tid);
                     pthread_mutex_unlock(&mutex); 
                 }
                 else if (strcmp(client_buffer,"exit")==0) {
@@ -434,23 +435,13 @@ void * new_client_routine(void * arg) {
                     else {
                         is_connected_to_expert = 1;
                         is_connected_to_technician = 0;
-                        exp_id = atoi(temp->val);
-                        int i = 0;
-                        int done = 0;
-                        pthread_mutex_lock(&mutex);
-                        while (i < nb && threads_arg[i] != NULL && done == 0) {
-                            if((threads_arg[i]->sock_id) == exp_id && threads_arg[i]->ended != 1) {
-                                exp_thread_id = i;
-                                done =1;
-                            }
-                            i++;
-                        }
-                        pthread_mutex_unlock(&mutex);
-                        printf("Client forwarded\n");
+                        exp_id = atoi(temp->cle);
+                        exp_thread_id = atoi(temp->val);
+                        printf("Client forwarded %d\n", exp_thread_id);
                         n = write(arglist->sock_id,"You've been forwarded to an Expert - Please ask your question again\n",69);
                         if (n < 0) error("ERROR writing to socket");
                          pthread_mutex_lock(&mutex);
-                        arg_new_in(threads_arg[exp_thread_id],"A new user needs your help !");
+                        arg_new_in(threads_arg[exp_thread_id],"A new user needs your help !\n");
                         pthread_mutex_unlock(&mutex);
                         } 
                 }
@@ -478,7 +469,8 @@ void * new_staff_routine(void * arg) {
 
     sprintf(sockid, "%d", arglist->sock_id);    
 
-    sleep(0.5);
+    char threadid[100];
+    sprintf(threadid, "%d", arglist->thread_id);  
     int connection_await= 1;
     char buffer[256];
     int status = -1;
@@ -540,21 +532,21 @@ void * new_staff_routine(void * arg) {
     }
     else if (status == 1) {
         printf("Technicien logged in !\n");
-        reponse = "You logged in as a Technician !\n Wait patientally, a new user requiring your help will arrive soon!";
+        reponse = "You logged in as a Technician !\n Wait patientally, a new user requiring your help will arrive soon!\n";
         n = write(arglist->sock_id,reponse,strlen(reponse));
                     if (n < 0) error("ERROR writing to socket");
         pthread_mutex_lock(&mutex);
-        list_append(arglist->info->techniciens, sockid,sockid);
+        list_append(arglist->info->techniciens, sockid,threadid);
         pthread_mutex_unlock(&mutex);
 
     }
     else {
         printf("Expert logged in !\n");
-        reponse = "You logged in as an Expert !\n Wait patientally, a new user requiring your help will arrive soon!";
+        reponse = "You logged in as an Expert !\n Wait patientally, a new user requiring your help will arrive soon!\n";
         n = write(arglist->sock_id,reponse,strlen(reponse));
                     if (n < 0) error("ERROR writing to socket");
         pthread_mutex_lock(&mutex);
-        list_append(arglist->info->experts, sockid,sockid);
+        list_append(arglist->info->experts, sockid,threadid);
         pthread_mutex_unlock(&mutex);
     }
     sleep(0.3);
@@ -639,7 +631,6 @@ int main(int argc, char *argv[]) {
     info->experts = list_create();
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
-    int socket_count = 0; // a changer par une struct de liste
     pthread_mutex_init(&mutex, NULL);
     threads = malloc(nb * sizeof(pthread_t));
     threads_arg =  (arg_t **)calloc(nb,sizeof(arg_t *));
@@ -727,8 +718,8 @@ int main(int argc, char *argv[]) {
                     }
                     else {
                         //Création d'un nouveau thread pour le nouveau client
-                        printf("New client connection, %d ! \n",newsockfd);
-                        threads_arg[socket_count] = arg_create(newsockfd,mutex,info);
+                        printf("New client connection, %d ! \n",socket_count);
+                        threads_arg[socket_count] = arg_create(newsockfd,socket_count,mutex,info);
                         pthread_create(&threads[socket_count], NULL, new_client_routine, threads_arg[socket_count]);
                         socket_count +=1;
                     }
@@ -741,8 +732,8 @@ int main(int argc, char *argv[]) {
                     }
                     else {
                        //Création d'un nouveau thread pour le nouveau staff
-                        printf("New staff connection, %d ! \n",newsockfdserv);
-                        threads_arg[socket_count] = arg_create(newsockfdserv,mutex,info);
+                        printf("New staff connection, %d ! \n",socket_count);
+                        threads_arg[socket_count] = arg_create(newsockfdserv,socket_count,mutex,info);
                         pthread_create(&threads[socket_count], NULL, new_staff_routine, threads_arg[socket_count]);
                         socket_count +=1;
                     }

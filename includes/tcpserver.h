@@ -22,10 +22,11 @@ struct _arg_element_t
     info_t * info;
     pthread_mutex_t mutex;
     int ended;
+    int thread_id;
 };
 
 typedef struct _arg_element_t arg_t;
-arg_t * arg_create(int id, pthread_mutex_t mutex, info_t * info);
+arg_t * arg_create(int id, int thread_id, pthread_mutex_t mutex, info_t * info);
 void arg_destroy(arg_t * arg);
 void arg_new_in(arg_t* arg, char * in);
 void arg_new_out(arg_t* arg, char * out);

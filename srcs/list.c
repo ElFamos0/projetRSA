@@ -190,11 +190,11 @@ void list_remove(list_t * one_list, char* one_key) {
 
     else {
 
-        char * val = NULL;
-        while (!(list_is_empty(one_list)) && val == NULL) {
+        int done = 0;
+        while (!(list_is_empty(one_list)) && done == 0) {
             //printf("%s,%s\n",one_list->head->cle,one_key);
             if (strcmp(one_list->head->cle,one_key)==0) {
-                val = one_list->head->val;
+                done = 1;
                 list_pop(one_list);
             }
 
