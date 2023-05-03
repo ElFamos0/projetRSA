@@ -17,13 +17,19 @@ S'il ne reconnait pas le mot clé, alors il transmet le client vers un technicie
 Une fois que l'expert estime avoir fini son travail / ne peut toujours pas résoudre le problème, alors il met fin à la communication.
 Notons que si à un moment donné, un technicien ou un expert se déconnecte alors qu"il est en discussion avec un client, alors le serveur va tenté d'envoyer le client vers un autre staff du même niveau.
 Si, lors d'un forward, aucun membre du niveau requis n'est disponible, le client est simplement déconnecté du serveur.
-Enfin, un client peut quitter le chat à tout moment en écrivant le mot clé 'exit'.
+Enfin, un client peut quitter le chat à tout moment en écrivant le mot clé 'leave'.
 
 #### Côté staff
 
 Un staff se connecte via le second port du serveur, où on lui demande un mot de passe. S'il entre 'tech', alors il sera login en tant que Technicien, et s'il entre 'expert', il sera login en tant qu'Expert. Une fois connecté, il est placé en attente, et le serveur le préviendra dès qu'un client lui sera assigné. Une fois un client trouvé, il peut discuter avec lui pour tenter de résoudre son problème. Les techniciens peuvent forward un client vers un expert en utilisant le mot clé 'forward'. De même, les experts peuvent mettre fin à une consversation avec le même mot clé.
 Une fois la conversation terminée avec un client, le staff est replacé en file d'attente. 
-Tout comme les clients, les staffs peuvent quitter l'application à tout moment en utilisant le mot clé 'exit'.
+Tout comme les clients, les staffs peuvent quitter l'application à tout moment en utilisant le mot clé 'leave'.
+
+### Précisions
+
+Le caractère '§' étant utilisé par notre programme pour parser les messages, il est impossible de l'utiliser dans les conversations.
+Si un message ne s'affiche pas, c'est qu'il a dépassé la taille maximale du buffer (512 caractères). Ainsi, les messeages doivent faire moins de 512 caractères.
+
 
 ### Lancer l'application
 

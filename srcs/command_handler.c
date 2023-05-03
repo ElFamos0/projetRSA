@@ -21,7 +21,7 @@ char* handle_command(char* buffer) {
         return "Experts are your last resort. If they can't solve your issue, nobody can. That's why they can terminate the discussion at any time if they desire to do so !\n";
     }
     else if (strcmp(buffer, "leaving") == 0) {
-        return "You can leave at any time by typing in the keyword '\033[1;31mexit\033[0m'.\n";
+        return "You can leave at any time by typing in the keyword '\033[1;31mleave\033[0m'.\n";
     }
     else {
         return "unknown";

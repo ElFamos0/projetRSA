@@ -61,6 +61,7 @@ void * read_server_messages_routine(void * arg) {
         bzero(buffer,1024);
         n = read(arglist->sockid,buffer,1023);
         
+        if (connected) {
 
         if (n < 0) {
             if (errno == EWOULDBLOCK || errno == EAGAIN) {
@@ -83,54 +84,66 @@ void * read_server_messages_routine(void * arg) {
             // printf("%d %s\n",(int) strlen(buffer),buffer);
             // data received
             int i;
-            int last_null_index = -1;
-            int null_count = 0;
-            for (i = 0; i < 1023; i++) {
-                if (buffer[i] == '\0') {
-                    last_null_index = i;
-                    buffer[i] = '-';
-                    null_count +=1;
-                }
-                else {
+            int count = 0;
+            char temp_msg[1024];
+            int null_count =0;
+            bzero(temp_msg,1024);
+            for (i = 0; i < 1022; i++) {
+                if (buffer[i] == '$') {
+                    temp_msg[count] = '\0';
+                    char *last_newline = strrchr(temp_msg, '\n');
+                    if (last_newline != NULL) {
+                    *last_newline = '\0';
+                    } // On enlève le dernier '\n'
+                    //On ajoute le message à la liste des messages
+                    // printf("%s\n",temp_msg);
+                    char id[20];
+                    sprintf(id, "%d", arglist->msg_nb);  
+                    arglist->msg_nb +=1;
+                    list_append(arglist->msg->messages,id,temp_msg);
+                    // On reset le message temporaire
+                    count = 0;
+                    bzero(temp_msg,1024);
                     null_count = 0;
                 }
-                if (null_count >= 2) {
+                else if (buffer[i] == '\0') {
+                    // On skip le caractère
+                    null_count++;
+                }
+                else {
+                    temp_msg[count] = buffer[i];
+                    count++;
+                    null_count = 0;
+                }
+                if (null_count >2) {
                     break;
                 }
             }
-            
-            if (last_null_index != -1) {
-                buffer[last_null_index] = '\0';
-            }
+        
 
-            //printf("%s\n",buffer);
-            char *last_newline = strrchr(buffer, '\n');
-            if (last_newline != NULL) {
-                *last_newline = '\0';
-            } // On enlève le dernier '\n'
-            if(strcmp(buffer,"end") !=0) {
-                char id[20];
-                sprintf(id, "%d", arglist->msg_nb);  
-                arglist->msg_nb +=1;
-                list_append(arglist->msg->messages,id,buffer);
-            }
-            else {
-                connected = 0;
-                pthread_mutex_lock(&mutex);
-                arglist->ended = 1;
-                pthread_mutex_unlock(&mutex);
-            }
         }
 
         // print all messages in the message list
         li = arglist->msg->messages;
         while (li->tail != NULL) {
-            printf("Message received : %s \n",li->head->val);
+            if(strcmp(li->head->val,"end") !=0) {
+                // Si le message n'est pas un message de fin, on le print
+                printf("Message received : %s \n",li->head->val);
+               // printf("%d %d \n",strlen(li->head->val),(strcmp(li->head->val,"end")));
+            }
+            else {
+                // Sinon, on stop la connection
+                connected = 0;
+                pthread_mutex_lock(&mutex);
+                arglist->ended = 1;
+                pthread_mutex_unlock(&mutex);
+            }
             li = li->tail;
         }
         empty_list(arglist->msg->messages);
+        }
     }
-
+    printf("Listening thread ended\n");
     pthread_exit(NULL);
 }
 
@@ -223,24 +236,29 @@ int main(int argc, char *argv[])
                     *last_newline = '\0';
                 } // On enlève le dernier '\n'
 
-                if(strcmp(buffer,"exit") ==0) {
+                if(strcmp(buffer,"leave") ==0) {
                     pthread_mutex_lock(&mutex);
-                    connected = 0;
-                    threads_arg[0]->ended = 1;
+                    (threads_arg[0]->ended = 1);
                     pthread_mutex_unlock(&mutex);
+                    sleep(1);
+                    connected = 0;
                 }
                
             }
             // fgets(buffer,255,stdin);
             
         }
+        else {
+            sleep(1);
+        }
     }
-    sleep(0.3);
     list_destroy(server_messages->messages);
     free(server_messages);
     free(threads_arg);
     free(threads);
     // Fermeture du socket client
+    printf("Main Ended\n");
+    sleep(1);
     close(sockfd);
     return 0;
 }

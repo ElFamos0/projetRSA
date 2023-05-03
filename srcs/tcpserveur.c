@@ -19,9 +19,12 @@ pthread_mutex_t mutex;
 arg_t ** threads_arg;
 int nb = 10000;
 int socket_count = 0; 
+char end_string[2] = {'$','\0'};
+
 
 // Fonction pour gérer les erreurs
 void error(const char *msg) {
+    printf("Error : %s\n", msg);
     perror(msg);
     exit(1);
 }
@@ -71,7 +74,9 @@ void * new_client_routine(void * arg) {
     pthread_mutex_t mutex = arglist->mutex;
     int n;
     char * reponse = "\033[1;31mWelcome !\033[0m\nYou're currently connected to our chatbot ! Type '\033[1;31mhelp\033[0m' for more infos !\n";
+    
     n = write(arglist->sock_id,reponse,strlen(reponse));
+    write(arglist->sock_id,end_string,2);
                     if (n < 0) error("ERROR writing to socket");
     sleep(0.5);
     
@@ -116,9 +121,11 @@ void * new_client_routine(void * arg) {
             printf("Message reçu du client : %s\n",buffer);
             //write(arglist->sock_id,"Message sent",13);
 
-            if (!(strcmp(buffer,("exit")))) {
+            if (!(strcmp(buffer,("leave")))) {
                 n = write(arglist->sock_id,"end",4);
+                write(arglist->sock_id,end_string,2);
                 if (n < 0) error("ERROR writing to socket");
+                sleep(1);
                 close(arglist->sock_id);
                 arglist->ended = 1;
                 connected = 0;
@@ -128,6 +135,7 @@ void * new_client_routine(void * arg) {
                 // printf("Réponse: %s\n", reponse);
                 if (strcmp(reponse,"unknown") == 0) {
                     n = write(arglist->sock_id,"Unknown keyword - Forwarding you to a technician.\n",51);
+                    write(arglist->sock_id,end_string,2);
                         if (n < 0) error("ERROR writing to socket");
                     pthread_mutex_lock(&mutex); 
                     //printf("List update\n");
@@ -137,13 +145,15 @@ void * new_client_routine(void * arg) {
                     pthread_mutex_unlock(&mutex);
                     if (temp == NULL) {
                         n = write(arglist->sock_id,"No Technician available - Try again later.\n",44);
-                        printf("Closed\n");
+                        write(arglist->sock_id,end_string,2);
+                        //printf("Closed\n");
                         if (n < 0) error("ERROR writing to socket");
                         n = write(arglist->sock_id,"end",4);
+                        write(arglist->sock_id,end_string,2);
             
                         if (n < 0) error("ERROR writing to socket");
                         sleep(1);
-                        printf("Closed\n");
+                        //printf("Closed\n");
                         close(arglist->sock_id);
                         arglist->ended = 1;
                         connected = 0;
@@ -156,6 +166,7 @@ void * new_client_routine(void * arg) {
                         
                         printf("Client forwarded %d\n", tech_thread_id);
                         n = write(arglist->sock_id,"You've been forwarded to a technician - Please ask your question again\n",72);
+                        write(arglist->sock_id,end_string,2);
                         if (n < 0) error("ERROR writing to socket");
                          pthread_mutex_lock(&mutex);
                         arg_new_in(threads_arg[tech_thread_id],"A new user needs your help !\n");
@@ -164,6 +175,7 @@ void * new_client_routine(void * arg) {
                 }
                 else {
                     n = write(arglist->sock_id,reponse,strlen(reponse));
+                    write(arglist->sock_id,end_string,2);
                         if (n < 0) error("ERROR writing to socket");
                     }
                 }
@@ -200,13 +212,14 @@ void * new_client_routine(void * arg) {
             } // On enlève le dernier '\n'
             printf("Message reçu du client : %s\n",buffer);
 
-            if (!(strcmp(buffer,("exit")))) {
+            if (!(strcmp(buffer,("leave")))) {
                 pthread_mutex_lock(&mutex);
                 arg_new_in(threads_arg[tech_thread_id],"Client exited the room. Sending you back to available queue.\n");
                 pthread_mutex_unlock(&mutex);
-
                 n = write(arglist->sock_id,"end",4);
+                write(arglist->sock_id,end_string,2);
                 if (n < 0) error("ERROR writing to socket");
+                sleep(1);
                 close(arglist->sock_id);
                 arglist->ended = 1;
                 is_connected_to_technician = 0;
@@ -218,6 +231,9 @@ void * new_client_routine(void * arg) {
                 char tid[100];
                 sprintf(tid, "%d", tech_thread_id);  
                 list_append(arglist->info->techniciens, sid,tid);
+                printf("List of available technicians : ");
+                list_print(arglist->info->techniciens);
+                printf("\n");
                 pthread_mutex_unlock(&mutex);
             }
             else { // Il a envoyé un message, on le transmet à notre technicien via son arg->in . 
@@ -237,12 +253,13 @@ void * new_client_routine(void * arg) {
             arg_new_out(threads_arg[tech_thread_id],"\0");
             //printf("Leaving out %d\n",tech_thread_id);
             pthread_mutex_unlock(&mutex);
-
+            printf("%s", client_buffer);
             if (!(strcmp(client_buffer,"\0") == 0)) {
-                //On regarde si ce message est un forward / exit
+                //On regarde si ce message est un forward / leave
                 
                 if (strcmp(client_buffer,"forward")==0) {
                     n = write(arglist->sock_id,"Technician is unable to solve the issue - Forwarding you to an Expert.\n",72);
+                    write(arglist->sock_id,end_string,2);
                         if (n < 0) error("ERROR writing to socket");
                     pthread_mutex_lock(&mutex);
                     //printf("List update\n");
@@ -256,14 +273,20 @@ void * new_client_routine(void * arg) {
                     char tid[100];
                     sprintf(tid, "%d", tech_thread_id);  
                     list_append(arglist->info->techniciens, sid,tid);
+                    printf("List of available technicians : ");
+                    list_print(arglist->info->techniciens);
+                    printf("\n");
                     arg_new_in(threads_arg[tech_thread_id],"Client forwarded. Sending you back to available queue.\n");
                     pthread_mutex_unlock(&mutex);
 
                     if (temp == NULL) {
                         n = write(arglist->sock_id,"No Expert available - Try again later.\n",40);
+                        write(arglist->sock_id,end_string,2);
                         if (n < 0) error("ERROR writing to socket");
                         n = write(arglist->sock_id,"end",4);
+                        write(arglist->sock_id,end_string,2);
                         if (n < 0) error("ERROR writing to socket");
+                        sleep(1);
                         close(arglist->sock_id);
                         arglist->ended = 1;
                         is_connected_to_technician = 0;
@@ -275,14 +298,16 @@ void * new_client_routine(void * arg) {
                         exp_thread_id = atoi(temp->val);
                         printf("Client forwarded %d\n", exp_thread_id);
                         n = write(arglist->sock_id,"You've been forwarded to an Expert - Please ask your question again\n",69);
+                        write(arglist->sock_id,end_string,2);
                         if (n < 0) error("ERROR writing to socket");
                          pthread_mutex_lock(&mutex);
                         arg_new_in(threads_arg[exp_thread_id],"A new user needs your help !\n");
                         pthread_mutex_unlock(&mutex);
                         }   
                 }
-                else if (strcmp(client_buffer,"exit")==0) {
+                else if (strcmp(client_buffer,"leave")==0) {
                     n = write(arglist->sock_id,"Technicien unexpectedly left the chat room. Trying to find a new one.\n",71);
+                    write(arglist->sock_id,end_string,2);
                         if (n < 0) error("ERROR writing to socket");
                     pthread_mutex_lock(&mutex);    
                     element_t * temp = list_pop(arglist->info->techniciens);
@@ -293,9 +318,11 @@ void * new_client_routine(void * arg) {
 
                     if (temp == NULL) {
                         n = write(arglist->sock_id,"No Technician available - Try again later.\n",44);
+                        write(arglist->sock_id,end_string,2);
                         
                         if (n < 0) error("ERROR writing to socket");
                         n = write(arglist->sock_id,"end",4);
+                        write(arglist->sock_id,end_string,2);
                         
                         if (n < 0) error("ERROR writing to socket");
                         sleep(1);
@@ -310,6 +337,7 @@ void * new_client_routine(void * arg) {
                         tech_thread_id = atoi(temp->val);
                         printf("Client forwarded %d\n", tech_thread_id);
                         n = write(arglist->sock_id,"You've been forwarded to a technician - Please ask your question again\n",72);
+                        write(arglist->sock_id,end_string,2);
                         if (n < 0) error("ERROR writing to socket");
                          pthread_mutex_lock(&mutex);
                         arg_new_in(threads_arg[tech_thread_id],"A new user needs your help !\n");
@@ -318,6 +346,7 @@ void * new_client_routine(void * arg) {
                 }
                 else { // On passe le message à notre client
                     n = write(arglist->sock_id,client_buffer,strlen(client_buffer));
+                    write(arglist->sock_id,end_string,2);
                         if (n < 0) error("ERROR writing to socket");
                 }
             }
@@ -350,13 +379,14 @@ void * new_client_routine(void * arg) {
             } // On enlève le dernier '\n'
             printf("Message reçu du client : %s\n",buffer);
 
-            if (!(strcmp(buffer,("exit")))) {
+            if (!(strcmp(buffer,("leave")))) {
                 pthread_mutex_lock(&mutex);
                 arg_new_in(threads_arg[exp_thread_id],"Client exited the room. Sending you back to available queue.\n");
                 pthread_mutex_unlock(&mutex);
-
                 n = write(arglist->sock_id,"end",4);
+                write(arglist->sock_id,end_string,2);
                 if (n < 0) error("ERROR writing to socket");
+                sleep(1);
                 close(arglist->sock_id);
                 arglist->ended = 1;
                 is_connected_to_expert = 0;
@@ -368,6 +398,9 @@ void * new_client_routine(void * arg) {
                 sprintf(tid, "%d", exp_thread_id);    
                 pthread_mutex_lock(&mutex);
                 list_append(arglist->info->experts, sid,tid);
+                printf("List of available experts : ");
+                list_print(arglist->info->experts);
+                printf("\n");
                 pthread_mutex_unlock(&mutex);
             }
             else { // Il a envoyé un message, on le transmet à notre expert via son arg->in . 
@@ -387,19 +420,21 @@ void * new_client_routine(void * arg) {
             arg_new_out(threads_arg[exp_thread_id],"\0");
             //printf("Accessing out %d\n",exp_thread_id);
             pthread_mutex_unlock(&mutex);
-
+            printf("%s", client_buffer);
             if (!(strcmp(client_buffer,"\0") == 0)) {
-                //On regarde si ce message est un forward / exit
+                //On regarde si ce message est un forward / leave
                 
                 if (strcmp(client_buffer,"forward")==0) {
                     n = write(arglist->sock_id,"Expert is unable to solve the issue - Terminating connection.\n",63);
+                    write(arglist->sock_id,end_string,2);
                         if (n < 0) error("ERROR writing to socket");
                     pthread_mutex_lock(&mutex);
                     arg_new_in(threads_arg[exp_thread_id],"Client evacuated successfully. Sending you back to available queue.\n");
                     pthread_mutex_unlock(&mutex);
-
                     n = write(arglist->sock_id,"end",4);
+                    write(arglist->sock_id,end_string,2);
                     if (n < 0) error("ERROR writing to socket");
+                    sleep(1);
                     close(arglist->sock_id);
                     arglist->ended = 1;
                     is_connected_to_expert = 0;
@@ -411,10 +446,14 @@ void * new_client_routine(void * arg) {
                     sprintf(tid, "%d", exp_thread_id);    
                     pthread_mutex_lock(&mutex);
                     list_append(arglist->info->experts, sid,tid);
+                    printf("List of available experts : ");
+                    list_print(arglist->info->experts);
+                    printf("\n");
                     pthread_mutex_unlock(&mutex); 
                 }
-                else if (strcmp(client_buffer,"exit")==0) {
+                else if (strcmp(client_buffer,"leave")==0) {
                     n = write(arglist->sock_id,"Expert unexpectedly left the chat room. Trying to find a new one.\n",67);
+                    write(arglist->sock_id,end_string,2);
                         if (n < 0) error("ERROR writing to socket");
                     
                     pthread_mutex_lock(&mutex);
@@ -426,9 +465,11 @@ void * new_client_routine(void * arg) {
 
                     if (temp == NULL) {
                         n = write(arglist->sock_id,"No Expert available - Try again later.\n",40);
+                        write(arglist->sock_id,end_string,2);
                       
                         if (n < 0) error("ERROR writing to socket");
                         n = write(arglist->sock_id,"end",4);
+                        write(arglist->sock_id,end_string,2);
                       
                         if (n < 0) error("ERROR writing to socket");
                         sleep(1);
@@ -443,6 +484,7 @@ void * new_client_routine(void * arg) {
                         exp_thread_id = atoi(temp->val);
                         printf("Client forwarded %d\n", exp_thread_id);
                         n = write(arglist->sock_id,"You've been forwarded to an Expert - Please ask your question again\n",69);
+                        write(arglist->sock_id,end_string,2);
                         if (n < 0) error("ERROR writing to socket");
                          pthread_mutex_lock(&mutex);
                         arg_new_in(threads_arg[exp_thread_id],"A new user needs your help !\n");
@@ -451,12 +493,13 @@ void * new_client_routine(void * arg) {
                 }
                 else { // On passe le message à notre client
                     n = write(arglist->sock_id,client_buffer,strlen(client_buffer));
+                    write(arglist->sock_id,end_string,2);
                         if (n < 0) error("ERROR writing to socket");
                 }
             }
     }
     free(client_buffer);
-    printf("Client %d exited\n", arglist->sock_id);
+    printf("Client %d exited\n", arglist->thread_id);
     pthread_exit(NULL);
 }
 
@@ -467,6 +510,7 @@ void * new_staff_routine(void * arg) {
     pthread_mutex_t mutex = arglist->mutex;
     char * reponse = "Please type in a password ";
     n = write(arglist->sock_id,reponse,strlen(reponse));
+    write(arglist->sock_id,end_string,2);
                     if (n < 0) error("ERROR writing to socket");
 
     char sockid[100];
@@ -484,6 +528,7 @@ void * new_staff_routine(void * arg) {
     fcntl(arglist->sock_id, F_SETFL, flags | O_NONBLOCK);
 
     while(connection_await) {
+       
         bzero(buffer,1024);
         n = read(arglist->sock_id,buffer,1023);
         if (n < 0) {
@@ -525,11 +570,13 @@ void * new_staff_routine(void * arg) {
         printf("Staff failed to connect\n");
         reponse = "Login failed";
         n = write(arglist->sock_id,reponse,strlen(reponse));
+        write(arglist->sock_id,end_string,2);
                     if (n < 0) error("ERROR writing to socket");
-        sleep(0.3);
         reponse = "end";
         n = write(arglist->sock_id,reponse,strlen(reponse));
+        write(arglist->sock_id,end_string,2);
                     if (n < 0) error("ERROR writing to socket");
+        sleep(1);
         close(arglist->sock_id);
         arglist->ended = 1;
         pthread_exit(NULL);
@@ -538,9 +585,13 @@ void * new_staff_routine(void * arg) {
         printf("Technicien logged in !\n");
         reponse = "You logged in as a Technician !\n Wait patiently, a new user requiring your help will arrive soon!\n";
         n = write(arglist->sock_id,reponse,strlen(reponse));
+        write(arglist->sock_id,end_string,2);
                     if (n < 0) error("ERROR writing to socket");
         pthread_mutex_lock(&mutex);
         list_append(arglist->info->techniciens, sockid,threadid);
+        printf("List of available techicians : ");
+        list_print(arglist->info->techniciens);
+        printf("\n");
         pthread_mutex_unlock(&mutex);
 
     }
@@ -548,9 +599,13 @@ void * new_staff_routine(void * arg) {
         printf("Expert logged in !\n");
         reponse = "You logged in as an Expert !\n Wait patiently, a new user requiring your help will arrive soon!\n";
         n = write(arglist->sock_id,reponse,strlen(reponse));
+        write(arglist->sock_id,end_string,2);
                     if (n < 0) error("ERROR writing to socket");
         pthread_mutex_lock(&mutex);
         list_append(arglist->info->experts, sockid,threadid);
+        printf("List of available experts : ");
+        list_print(arglist->info->experts);
+        printf("\n");
         pthread_mutex_unlock(&mutex);
     }
     sleep(0.3);
@@ -581,13 +636,18 @@ void * new_staff_routine(void * arg) {
                 *last_newline = '\0';
             } // On enlève le dernier '\n'
             printf("Message reçu du staff : %s\n",buffer);
-            if (!(strcmp(buffer,("exit")))) {
+            if (!(strcmp(buffer,("leave")))) {
+                
                 pthread_mutex_lock(&mutex);
-                arg_new_out(arglist,"exit");
+                arg_new_out(arglist,"leave");
                 pthread_mutex_unlock(&mutex);
-                sleep(1);
                 n = write(arglist->sock_id,"end",4);
-                if (n < 0) error("ERROR writing to socket");
+
+                write(arglist->sock_id,end_string,2);
+                
+                if (n < 0) 
+                    error("ERROR writing to socket");
+                sleep(1);
                 close(arglist->sock_id);
                 arglist->ended = 1;
                 connected = 0;
@@ -617,13 +677,14 @@ void * new_staff_routine(void * arg) {
 
             if (!(strcmp(staff_buffer,"\0") == 0)) {
                 n = write(arglist->sock_id,staff_buffer,strlen(staff_buffer));
+                write(arglist->sock_id,end_string,2);
                         if (n < 0) error("ERROR writing to socket");
             
                 
             }
     }
         free(staff_buffer);
-        printf("Staff %d exited\n", arglist->sock_id);
+        printf("Staff %d exited\n", arglist->thread_id);
         pthread_exit(NULL);
     }
 
@@ -691,6 +752,7 @@ int main(int argc, char *argv[]) {
     FD_ZERO(&master_set);
     FD_SET(sockfd, &master_set);
     FD_SET(sockfdserv, &master_set);
+    printf("Server running\n");
     while (is_main) {
     // Make a copy of the master set
     fd_set read_set = master_set;
@@ -703,6 +765,7 @@ int main(int argc, char *argv[]) {
     
     if (num_ready == -1) {
         perror("select");
+        printf("Error\n");
         exit(EXIT_FAILURE);
     }
     else if (num_ready == 0) {
@@ -755,6 +818,8 @@ int main(int argc, char *argv[]) {
     free(info);
     free(threads_arg);
     free(threads);
+    sleep(1);
     close(sockfd);
+    printf("Closing\n");
     return 0;
     }
