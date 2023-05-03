@@ -395,7 +395,7 @@ void * new_client_routine(void * arg) {
                     n = write(arglist->sock_id,"Expert is unable to solve the issue - Terminating connection.\n",63);
                         if (n < 0) error("ERROR writing to socket");
                     pthread_mutex_lock(&mutex);
-                    arg_new_in(threads_arg[exp_thread_id],"Client evacuated sucessfully. Sending you back to available queue.\n");
+                    arg_new_in(threads_arg[exp_thread_id],"Client evacuated successfully. Sending you back to available queue.\n");
                     pthread_mutex_unlock(&mutex);
 
                     n = write(arglist->sock_id,"end",4);
@@ -465,7 +465,7 @@ void * new_staff_routine(void * arg) {
     arg_t * arglist = (arg_t * ) arg;
     int n;
     pthread_mutex_t mutex = arglist->mutex;
-    char * reponse = "Please type in a password :";
+    char * reponse = "Please type in a password ";
     n = write(arglist->sock_id,reponse,strlen(reponse));
                     if (n < 0) error("ERROR writing to socket");
 

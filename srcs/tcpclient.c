@@ -84,10 +84,18 @@ void * read_server_messages_routine(void * arg) {
             // data received
             int i;
             int last_null_index = -1;
+            int null_count = 0;
             for (i = 0; i < 1023; i++) {
                 if (buffer[i] == '\0') {
                     last_null_index = i;
                     buffer[i] = '-';
+                    null_count +=1;
+                }
+                else {
+                    null_count = 0;
+                }
+                if (null_count >= 2) {
+                    break;
                 }
             }
             

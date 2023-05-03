@@ -15,7 +15,7 @@ char* handle_command(char* buffer) {
         return "If your input doesn't match any keyword, you will be forwarded to a technician. If none is available, your connection will unfortunately end.\n";
     }
     else if (strcmp(buffer, "tech") == 0) {
-        return "Technicians are real human, connected to the server, who are can help you solve your problem. If they can't hanfle it, they can always forward you to an expert!\n";
+        return "Technicians are real humans, connected to the server, who are can help you solve your problem. If they can't handle it, they can always forward you to an expert!\n";
     }
      else if (strcmp(buffer, "expert") == 0) {
         return "Experts are your last resort. If they can't solve your issue, nobody can. That's why they can terminate the discussion at any time if they desire to do so !\n";
