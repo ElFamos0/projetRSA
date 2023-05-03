@@ -536,7 +536,7 @@ void * new_staff_routine(void * arg) {
     }
     else if (status == 1) {
         printf("Technicien logged in !\n");
-        reponse = "You logged in as a Technician !\n Wait patiently a new user requiring your help will arrive soon!\n";
+        reponse = "You logged in as a Technician !\n Wait patiently, a new user requiring your help will arrive soon!\n";
         n = write(arglist->sock_id,reponse,strlen(reponse));
                     if (n < 0) error("ERROR writing to socket");
         pthread_mutex_lock(&mutex);
@@ -711,7 +711,7 @@ int main(int argc, char *argv[]) {
     }
     else {
         // At least one socket is ready for reading
-        printf("select() %d\n",num_ready);
+        //printf("select() %d\n",num_ready);
         for (int i = 0; i < FD_SETSIZE; i++) {
             if (FD_ISSET(i, &read_set)) {
                 if (i == sockfd) {
