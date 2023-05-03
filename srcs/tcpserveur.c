@@ -78,7 +78,7 @@ void * new_client_routine(void * arg) {
     char threadid[100];
     sprintf(threadid, "%d", arglist->thread_id);  
     int connected = 1;
-    char buffer[256];
+    char buffer[1024];
     int is_connected_to_technician = 0;
     int is_connected_to_expert = 0;
     int tech_id;
@@ -91,8 +91,8 @@ void * new_client_routine(void * arg) {
     fcntl(arglist->sock_id, F_SETFL, flags | O_NONBLOCK);
 
     while(connected) {
-        bzero(buffer,256);
-        n = read(arglist->sock_id,buffer,255);
+        bzero(buffer,1024);
+        n = read(arglist->sock_id,buffer,1023);
         if (n < 0) {
             if (errno == EWOULDBLOCK || errno == EAGAIN) {
                 // no data available on the socket, continue loop
@@ -137,11 +137,13 @@ void * new_client_routine(void * arg) {
                     pthread_mutex_unlock(&mutex);
                     if (temp == NULL) {
                         n = write(arglist->sock_id,"No Technician available - Try again later.\n",44);
-                    
+                        printf("Closed\n");
                         if (n < 0) error("ERROR writing to socket");
                         n = write(arglist->sock_id,"end",4);
             
                         if (n < 0) error("ERROR writing to socket");
+                        sleep(1);
+                        printf("Closed\n");
                         close(arglist->sock_id);
                         arglist->ended = 1;
                         connected = 0;
@@ -174,8 +176,8 @@ void * new_client_routine(void * arg) {
     
         // On regarde si le client a envoyé un message au serveur
        
-        bzero(buffer,256);
-        n = read(arglist->sock_id,buffer,255);
+        bzero(buffer,1024);
+        n = read(arglist->sock_id,buffer,1023);
         if (n < 0) {
             if (errno == EWOULDBLOCK || errno == EAGAIN) {
                 // no data available on the socket, continue loop
@@ -296,6 +298,7 @@ void * new_client_routine(void * arg) {
                         n = write(arglist->sock_id,"end",4);
                         
                         if (n < 0) error("ERROR writing to socket");
+                        sleep(1);
                         close(arglist->sock_id);
                         arglist->ended = 1;
                         is_connected_to_technician = 0;
@@ -323,8 +326,8 @@ void * new_client_routine(void * arg) {
        
         // On regarde si le client a envoyé un message au serveur
         
-        bzero(buffer,256);
-        n = read(arglist->sock_id,buffer,255);
+        bzero(buffer,1024);
+        n = read(arglist->sock_id,buffer,1023);
         if (n < 0) {
             if (errno == EWOULDBLOCK || errno == EAGAIN) {
                 // no data available on the socket, continue loop
@@ -428,6 +431,7 @@ void * new_client_routine(void * arg) {
                         n = write(arglist->sock_id,"end",4);
                       
                         if (n < 0) error("ERROR writing to socket");
+                        sleep(1);
                         close(arglist->sock_id);
                         arglist->ended = 1;
                         is_connected_to_expert = 0;
@@ -472,7 +476,7 @@ void * new_staff_routine(void * arg) {
     char threadid[100];
     sprintf(threadid, "%d", arglist->thread_id);  
     int connection_await= 1;
-    char buffer[256];
+    char buffer[1024];
     int status = -1;
 
     // set the socket to non-blocking mode
@@ -480,8 +484,8 @@ void * new_staff_routine(void * arg) {
     fcntl(arglist->sock_id, F_SETFL, flags | O_NONBLOCK);
 
     while(connection_await) {
-        bzero(buffer,256);
-        n = read(arglist->sock_id,buffer,255);
+        bzero(buffer,1024);
+        n = read(arglist->sock_id,buffer,1023);
         if (n < 0) {
             if (errno == EWOULDBLOCK || errno == EAGAIN) {
                 // no data available on the socket, continue loop
@@ -554,8 +558,8 @@ void * new_staff_routine(void * arg) {
     char * staff_buffer = strdup("\0");
     while(connected) {
         // Staff code to implement
-        bzero(buffer,256);
-        n = read(arglist->sock_id,buffer,255);
+        bzero(buffer,1024);
+        n = read(arglist->sock_id,buffer,1023);
         if (n < 0) {
             if (errno == EWOULDBLOCK || errno == EAGAIN) {
                 // no data available on the socket, continue loop

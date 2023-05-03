@@ -46,7 +46,7 @@ void * read_server_messages_routine(void * arg) {
     pthread_mutex_t mutex = arglist->mutex;
 
     int connected = 1;
-    char buffer[256];
+    char buffer[1024];
     int n;
     list_t * li;
 
@@ -58,8 +58,8 @@ void * read_server_messages_routine(void * arg) {
         pthread_mutex_lock(&mutex);
         connected = (!arglist->ended);
         pthread_mutex_unlock(&mutex);
-        bzero(buffer,256);
-        n = read(arglist->sockid,buffer,255);
+        bzero(buffer,1024);
+        n = read(arglist->sockid,buffer,1023);
         
 
         if (n < 0) {
@@ -83,21 +83,19 @@ void * read_server_messages_routine(void * arg) {
             // printf("%d %s\n",(int) strlen(buffer),buffer);
             // data received
             int i;
-            int last_null = -1;
-            for (i = 0; i < 255; i++) {
+            int last_null_index = -1;
+            for (i = 0; i < 1023; i++) {
                 if (buffer[i] == '\0') {
-                    if (last_null == -1) {
-                        last_null = i;
-                    }
-                } else {
-                    last_null = -1;
+                    last_null_index = i;
+                    buffer[i] = '-';
                 }
             }
             
-            if (last_null != -1) {
-                buffer[last_null] = '\0';
+            if (last_null_index != -1) {
+                buffer[last_null_index] = '\0';
             }
-            
+
+            //printf("%s\n",buffer);
             char *last_newline = strrchr(buffer, '\n');
             if (last_newline != NULL) {
                 *last_newline = '\0';
@@ -141,7 +139,7 @@ int main(int argc, char *argv[])
     msg_t * server_messages = (msg_t *)malloc(sizeof(msg_t));
     server_messages->messages = list_create();
 
-    char buffer[256];
+    char buffer[1024];
 
     // Vérification des arguments de la ligne de commande
     if (argc < 3) {
@@ -195,9 +193,9 @@ int main(int argc, char *argv[])
         connected = (!threads_arg[0]->ended);
         pthread_mutex_unlock(&mutex);
         if (connected) {
-            bzero(buffer,256);
+            bzero(buffer,1024);
             if (select(STDIN_FILENO + 1, &set, NULL, NULL, &timeout) > 0) {
-                fgets(buffer, 255, stdin);
+                fgets(buffer, 1023, stdin);
                 n = strlen(buffer);
                 char *last_newline = strrchr(buffer, '\n');
                 if (last_newline != NULL) {
