@@ -82,10 +82,20 @@ void * read_server_messages_routine(void * arg) {
             // printf("%d\n",n);
             // printf("%d %s\n",(int) strlen(buffer),buffer);
             // data received
-            while (n > strlen(buffer) && strlen(buffer) < 254) {
-                buffer[strlen(buffer)]= '-';
-                // printf("%s\n",buffer);
-                buffer[255] = '\0';
+            int i;
+            int last_null = -1;
+            for (i = 0; i < 255; i++) {
+                if (buffer[i] == '\0') {
+                    if (last_null == -1) {
+                        last_null = i;
+                    }
+                } else {
+                    last_null = -1;
+                }
+            }
+            
+            if (last_null != -1) {
+                buffer[last_null] = '\0';
             }
             
             char *last_newline = strrchr(buffer, '\n');
