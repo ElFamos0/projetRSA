@@ -256,7 +256,7 @@ void * new_client_routine(void * arg) {
             arg_new_out(threads_arg[tech_thread_id],"\0");
             //printf("Leaving out %d\n",tech_thread_id);
             pthread_mutex_unlock(&mutex);
-            printf("%s", client_buffer);
+            //printf("%s", client_buffer);
             if (!(strcmp(client_buffer,"\0") == 0)) {
                 //On regarde si ce message est un forward / leave
                 
@@ -429,7 +429,7 @@ void * new_client_routine(void * arg) {
             arg_new_out(threads_arg[exp_thread_id],"\0");
             //printf("Accessing out %d\n",exp_thread_id);
             pthread_mutex_unlock(&mutex);
-            printf("%s", client_buffer);
+            //printf("%s", client_buffer);
             if (!(strcmp(client_buffer,"\0") == 0)) {
                 //On regarde si ce message est un forward / leave
                 

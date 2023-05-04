@@ -27,8 +27,12 @@ Tout comme les clients, les staffs peuvent quitter l'application à tout moment 
 
 ### Précisions
 
-Le caractère '§' étant utilisé par notre programme pour parser les messages, il est impossible de l'utiliser dans les conversations.
+Le caractère '$' étant utilisé par notre programme pour parser les messages, il est impossible de l'utiliser dans les conversations.
 Si un message ne s'affiche pas, c'est qu'il a dépassé la taille maximale du buffer (512 caractères). Ainsi, les messeages doivent faire moins de 512 caractères.
+
+#### Bugs connus 
+
+Très rarement (rencontré à une unique occasion), lorsque'un client est forward, il l'est vers un mauvais membre du staff, qui n'existe plus. Après plusieurs heures de tests, nous n'avons pas réussi à répliquer le bug une seule fois, même en faisant la même série d'inputs qui l'avait déclenché la initialement. Ainsi, nous nous excusons si vous rencontrez ce bug, le plus simple étant de redémarrer le serveur pour reprendre une utilisation normale. Vous ne devriez pas le rencontrer, mais nous préférons vous prévenir au cas où.
 
 
 ### Lancer l'application
@@ -38,4 +42,5 @@ make all
 ./tcpserver 5454 5456 # Lance le serveur 
 ./tcpclient localhost 5454  # Lance un client lambda
 ./tcpclient localhost 5456  # Lance un client 'staff'
+# Il faut lancer le serveur et les différents clients sur des terminaux différenets.
 ```
