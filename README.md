@@ -2,7 +2,7 @@
 
 ## Application tchat d’assistance multi-niveaux
 
-## BRUNET Jules - DAMIEN Malo
+## BRUNET Jules - DAMIEN Malo - USICHENKO Anhelina
 
 ### Présentation
 
