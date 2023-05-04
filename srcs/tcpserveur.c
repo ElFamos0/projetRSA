@@ -118,7 +118,7 @@ void * new_client_routine(void * arg) {
             if (last_newline != NULL) {
                 *last_newline = '\0';
             } // On enlève le dernier '\n'
-            printf("Message reçu du client : %s\n",buffer);
+            printf("Message reçu du client %d : %s\n",arglist->thread_id,buffer);
             //write(arglist->sock_id,"Message sent",13);
 
             if (!(strcmp(buffer,("leave")))) {
@@ -141,6 +141,9 @@ void * new_client_routine(void * arg) {
                     //printf("List update\n");
                     //list_print(arglist->info->techniciens);   
                     element_t * temp = list_pop(arglist->info->techniciens);
+                    printf("List of available techicians : ");
+                    list_print(arglist->info->techniciens);
+                    printf("\n");
                     //printf("updated\n");
                     pthread_mutex_unlock(&mutex);
                     if (temp == NULL) {
@@ -210,7 +213,7 @@ void * new_client_routine(void * arg) {
             if (last_newline != NULL) {
                 *last_newline = '\0';
             } // On enlève le dernier '\n'
-            printf("Message reçu du client : %s\n",buffer);
+            printf("Message reçu du client %d : %s\n",arglist->thread_id,buffer);
 
             if (!(strcmp(buffer,("leave")))) {
                 pthread_mutex_lock(&mutex);
@@ -265,6 +268,9 @@ void * new_client_routine(void * arg) {
                     //printf("List update\n");
                     //list_print(arglist->info->experts);
                     element_t * temp = list_pop(arglist->info->experts);
+                    printf("List of available experts : ");
+                    list_print(arglist->info->experts);
+                    printf("\n");
                     //printf("updated\n");
                     char sockid[100];
                     sprintf(sockid, "%d", tech_id);  
@@ -311,6 +317,9 @@ void * new_client_routine(void * arg) {
                         if (n < 0) error("ERROR writing to socket");
                     pthread_mutex_lock(&mutex);    
                     element_t * temp = list_pop(arglist->info->techniciens);
+                    printf("List of available technicians : ");
+                    list_print(arglist->info->techniciens);
+                    printf("\n");
                     arg_new_out(threads_arg[tech_thread_id],"\0");
                     pthread_mutex_unlock(&mutex);
                     free(client_buffer);
@@ -377,7 +386,7 @@ void * new_client_routine(void * arg) {
             if (last_newline != NULL) {
                 *last_newline = '\0';
             } // On enlève le dernier '\n'
-            printf("Message reçu du client : %s\n",buffer);
+            printf("Message reçu du client %d : %s\n",arglist->thread_id,buffer);
 
             if (!(strcmp(buffer,("leave")))) {
                 pthread_mutex_lock(&mutex);
@@ -458,6 +467,9 @@ void * new_client_routine(void * arg) {
                     
                     pthread_mutex_lock(&mutex);
                     element_t * temp = list_pop(arglist->info->experts);
+                    printf("List of available experts : ");
+                    list_print(arglist->info->experts);
+                    printf("\n");
                     arg_new_out(threads_arg[exp_thread_id],"\0");
                     pthread_mutex_unlock(&mutex);
                     free(client_buffer);
@@ -551,7 +563,7 @@ void * new_staff_routine(void * arg) {
             if (last_newline != NULL) {
                 *last_newline = '\0';
             } // On enlève le dernier '\n'
-            printf("Message reçu du staff : %s\n",buffer);
+            printf("Message reçu du staff %d : %s\n",arglist->thread_id,buffer);
 
             if (!(strcmp(buffer,("tech")))) {
                 status = 1;
@@ -635,7 +647,7 @@ void * new_staff_routine(void * arg) {
             if (last_newline != NULL) {
                 *last_newline = '\0';
             } // On enlève le dernier '\n'
-            printf("Message reçu du staff : %s\n",buffer);
+            printf("Message reçu du staff %d : %s\n",arglist->thread_id,buffer);
             if (!(strcmp(buffer,("leave")))) {
                 
                 pthread_mutex_lock(&mutex);
@@ -652,10 +664,20 @@ void * new_staff_routine(void * arg) {
                 arglist->ended = 1;
                 connected = 0;
                 if (status == 1) {
+                    pthread_mutex_lock(&mutex);
                     list_remove(arglist->info->techniciens,sockid);
+                    printf("List of available technicians : ");
+                    list_print(arglist->info->techniciens);
+                    printf("\n");
+                    pthread_mutex_unlock(&mutex);
                 }
                 else {
+                    pthread_mutex_lock(&mutex);
                     list_remove(arglist->info->experts,sockid);
+                    printf("List of available experts : ");
+                    list_print(arglist->info->experts);
+                    printf("\n");
+                    pthread_mutex_unlock(&mutex);
                 }
                 
             }
